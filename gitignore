@@ -1,0 +1,8 @@
+.streamlit/secrets.toml
+data/images.npz
+*.zip
+!nltk_data/sentiment/vader_lexicon.zip
+*.rar
+__pycache__/
+.ipynb_checkpoints/
+*.tmp
