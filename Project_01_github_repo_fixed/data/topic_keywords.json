@@ -1,0 +1,19 @@
+{
+  "lesson": [
+    "lesson",
+    "explain",
+    "explanation",
+    "teaching",
+    "teacher"
+  ],
+  "practice": [
+    "practice",
+    "exercise",
+    "assignment"
+  ],
+  "facilities": [
+    "computer",
+    "internet",
+    "classroom"
+  ]
+}

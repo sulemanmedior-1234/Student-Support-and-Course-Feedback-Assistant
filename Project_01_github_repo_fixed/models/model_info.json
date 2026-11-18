@@ -1,0 +1,100 @@
+{
+  "target": "needs_support",
+  "numeric_features": [
+    "G1",
+    "G2",
+    "studytime",
+    "failures"
+  ],
+  "categorical_features": [
+    "schoolsup",
+    "famsup",
+    "internet"
+  ],
+  "cluster_features": [
+    "G1",
+    "G2",
+    "studytime",
+    "failures"
+  ],
+  "numeric_ranges": {
+    "G1": [
+      0,
+      20
+    ],
+    "G2": [
+      0,
+      20
+    ],
+    "studytime": [
+      1,
+      4
+    ],
+    "failures": [
+      0,
+      4
+    ]
+  },
+  "category_values": {
+    "schoolsup": [
+      "no",
+      "yes"
+    ],
+    "famsup": [
+      "no",
+      "yes"
+    ],
+    "internet": [
+      "no",
+      "yes"
+    ]
+  },
+  "image_shape": [
+    28,
+    28,
+    1
+  ],
+  "image_classes": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9"
+  ],
+  "versions": {
+    "scikit-learn": "1.6.1",
+    "tensorflow": "2.21.0",
+    "numpy": "2.4.6",
+    "pandas": "2.2.3",
+    "nltk": "3.9.1"
+  },
+  "test_results": {
+    "decision_tree": {
+      "model": "Decision tree",
+      "accuracy": 0.9166666666666666,
+      "macro_f1": 0.9073788206236493,
+      "class1_precision": 0.8571428571428571,
+      "class1_recall": 0.9
+    },
+    "baseline": {
+      "model": "Baseline",
+      "accuracy": 0.6666666666666666,
+      "macro_f1": 0.4,
+      "class1_precision": 0.0,
+      "class1_recall": 0.0
+    },
+    "cnn": {
+      "accuracy": 0.894,
+      "macro_f1": 0.8942421772225151
+    },
+    "vader": {
+      "accuracy": 0.9666666666666667,
+      "macro_f1": 0.9665831244778612
+    }
+  }
+}

@@ -1,0 +1,31 @@
+comment_id,text,sentiment_label
+P01_F28,The worksheet contains a table and a diagram.,neutral
+P01_F16,The practice instructions were unclear and frustrating.,negative
+P01_F24,The computer is on the second desk.,neutral
+P01_F18,The rude response to my question was upsetting.,negative
+P01_F09,The internet worked well and the lesson was enjoyable.,positive
+P01_F10,The extra practice made me feel confident and happy.,positive
+P01_F29,The notebook file is named exercise one.,neutral
+P01_F25,There are three practice files in the folder.,neutral
+P01_F13,The explanation was poor and left me disappointed.,negative
+P01_F01,The teacher explained the lesson clearly.,positive
+P01_F05,I am happy with the useful computer practice.,positive
+P01_F17,I am worried because the lesson moved too quickly.,negative
+P01_F06,The patient teacher gave me great support.,positive
+P01_F14,The slow internet was very annoying.,negative
+P01_F12,I am unhappy with the confusing assignment.,negative
+P01_F23,The lesson started at ten oclock.,neutral
+P01_F02,The practice exercises were helpful.,positive
+P01_F03,I enjoyed the friendly classroom discussion.,positive
+P01_F26,The teacher wrote two lines of code.,neutral
+P01_F04,The examples were excellent and easy to follow.,positive
+P01_F22,The assignment has five questions.,neutral
+P01_F27,The class timetable is on the wall.,neutral
+P01_F19,"Great, another broken computer and another wasted lesson.",negative
+P01_F30,The next lesson is on Monday.,neutral
+P01_F21,The class meets in room four.,neutral
+P01_F08,I loved the clear explanation of Python loops.,positive
+P01_F11,The computer was broken and the lesson was frustrating.,negative
+P01_F15,I hated the noisy classroom and missed the explanation.,negative
+P01_F20,The examples were useful but the teaching support was terrible.,negative
+P01_F07,The assignment feedback was helpful and encouraging.,positive
