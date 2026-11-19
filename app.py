@@ -5,12 +5,7 @@ Feedback digit, Course comments, Teaching summary.
 The app only LOADS saved models. It never trains after a click.
 """
 import json
-import os
 from pathlib import Path
-
-# Hide TensorFlow's start-up INFO/WARNING lines in the logs (they are not errors).
-# Must be set BEFORE tensorflow is imported.
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 
 import joblib
 import numpy as np
@@ -21,22 +16,6 @@ from PIL import Image
 BASE = Path(__file__).parent
 DATA = BASE / "data"
 MODELS = BASE / "models"
-
-# ---------------------------------------------------------------- file check
-# The most common deploy problem is a file or folder that did not get uploaded
-# to GitHub. Show a clear message instead of a long Python traceback.
-REQUIRED_FILES = [
-    "models/model_info.json", "models/supervised.joblib", "models/clusters.joblib",
-    "models/images.keras", "models/cluster_descriptions.json", "models/cluster_profiles.csv",
-    "data/main.csv", "data/feedback.csv", "data/example_inputs.csv", "data/topic_keywords.json",
-    "nltk_data/sentiment/vader_lexicon.zip",
-]
-MISSING_FILES = [f for f in REQUIRED_FILES if not (BASE / f).exists()]
-if MISSING_FILES:
-    st.error("These files are missing from the GitHub repository, next to app.py:\n\n"
-             + "\n".join(f"- `{f}`" for f in MISSING_FILES)
-             + "\n\nUpload them in the same folders, commit, then reboot the app.")
-    st.stop()
 
 INFO = json.loads((MODELS / "model_info.json").read_text())
 NUM = INFO["numeric_features"]
@@ -79,7 +58,7 @@ def validate_record(record):
         if not number.is_integer():
             errors.append(f"{f} must be a whole number, got {value}.")
         elif not low <= number <= high:
-            errors.append(f"{f} = {value:g} is outside the allowed range {low} to {high}.")
+            errors.append(f"{f} = {number:g} is outside the allowed range {low} to {high}.")
     for f in CAT:
         value = str(record[f]).strip().lower()
         if value not in CATEGORIES[f]:
@@ -183,6 +162,72 @@ def assign_topic(text):
     return "other", ""
 
 
+# ---------------------------------------------------------------- assignments
+ASSIGNMENT_TYPES = ["pdf", "docx", "txt", "md", "csv"]
+MAX_ASSIGNMENT_MB = 10
+
+
+def read_assignment(name, data):
+    """Extract plain text from an uploaded assignment.
+
+    name: file name (used for the extension). data: raw bytes.
+    Returns (text, info) where info is a short note about how it was read.
+    Raises ValueError with a friendly message if the file cannot be read.
+    """
+    ext = Path(name).suffix.lower().lstrip(".")
+    if ext == "pdf":
+        import io
+        from pypdf import PdfReader
+        try:
+            reader = PdfReader(io.BytesIO(data))
+            if reader.is_encrypted:
+                reader.decrypt("")
+            pages = [(p.extract_text() or "").strip() for p in reader.pages]
+        except Exception as e:
+            raise ValueError(f"Could not open this PDF ({type(e).__name__}). It may be damaged or password-protected.")
+        text = "\n\n".join(f"--- Page {i} ---\n{t}" for i, t in enumerate(pages, 1) if t)
+        if not text.strip():
+            raise ValueError("This PDF has no selectable text. It is probably a scanned or photographed page. "
+                             "Please upload the original Word/PDF file, or a typed copy.")
+        return text, f"PDF, {len(pages)} page(s)"
+    if ext == "docx":
+        import io
+        import docx
+        try:
+            doc = docx.Document(io.BytesIO(data))
+        except Exception as e:
+            raise ValueError(f"Could not open this Word file ({type(e).__name__}). Save it as .docx and try again.")
+        parts = [p.text for p in doc.paragraphs if p.text.strip()]
+        for table in doc.tables:                  # include text inside tables
+            for row in table.rows:
+                cells = [c.text.strip() for c in row.cells if c.text.strip()]
+                if cells:
+                    parts.append(" | ".join(cells))
+        text = "\n".join(parts)
+        if not text.strip():
+            raise ValueError("This Word file contains no text.")
+        return text, f"Word document, {len(doc.paragraphs)} paragraph(s), {len(doc.tables)} table(s)"
+    if ext in ("txt", "md", "csv"):
+        for enc in ("utf-8-sig", "utf-16", "cp1252"):
+            try:
+                return data.decode(enc), f"Text file ({enc})"
+            except UnicodeDecodeError:
+                continue
+        raise ValueError("Could not read the text encoding of this file.")
+    if ext == "doc":
+        raise ValueError("Old .doc files are not supported. Open it in Word and use Save As -> .docx.")
+    raise ValueError(f"Unsupported file type '.{ext}'. Use one of: {', '.join(ASSIGNMENT_TYPES)}.")
+
+
+def text_stats(text):
+    words = text.split()
+    sentences = [s for s in pd.Series(text.replace("!", ".").replace("?", ".").split(".")) if s.strip()]
+    return {"words": len(words), "characters": len(text),
+            "sentences": len(sentences),
+            "paragraphs": len([p for p in text.split("\n") if p.strip()]),
+            "reading_minutes": max(1, round(len(words) / 200))}
+
+
 def sentiment_counts(labels):
     """Count positive/neutral/negative. 'empty' comments are excluded from totals."""
     s = pd.Series(list(labels))
@@ -265,7 +310,8 @@ def main():
     st.session_state.setdefault("prediction", None)
 
     tabs = st.tabs(["Class overview and support prediction", "Learning profiles",
-                    "Feedback digit", "Course comments", "Teaching summary"])
+                    "Feedback digit", "Course comments", "Teaching summary",
+                    "Assignment upload"])
 
     # 1 ---- Class overview and support prediction
     with tabs[0]:
@@ -330,14 +376,7 @@ def main():
                       horizontal=True)
         invert = {"Auto-detect": None, "Dark digit on light paper": True,
                   "Light digit on dark background": False}[bg]
-        # TensorFlow is large, so it is loaded only when the teacher asks for it.
-        # This makes the app open faster and use less memory on the free host.
-        if not st.session_state.get("digit_model_on"):
-            if st.button("Load digit model and read the image"):
-                st.session_state["digit_model_on"] = True
-                st.rerun()
-            st.caption("The digit model loads once (a few seconds), then stays loaded.")
-        elif image is not None:
+        if image is not None:
             x = preprocess_image(image, invert)
             scores = load_image_model().predict(x, verbose=0)[0]
             top = int(scores.argmax())
@@ -391,20 +430,39 @@ def main():
                 st.markdown("**AI summary (Groq)**")
                 st.write(text)
 
+    # 6 ---- Assignment upload
+    with tabs[5]:
+        st.subheader("Upload an assignment")
+        doc = st.file_uploader("Assignment file (PDF, Word .docx, or text)", type=ASSIGNMENT_TYPES,
+                               key="assignment")
+        if doc is not None:
+            data = doc.getvalue()
+            if len(data) > MAX_ASSIGNMENT_MB * 1024 * 1024:
+                st.error(f"File is larger than {MAX_ASSIGNMENT_MB} MB.")
+            else:
+                try:
+                    text, info = read_assignment(doc.name, data)
+                except ValueError as e:
+                    st.error(str(e))
+                else:
+                    st.session_state["assignment_text"] = text
+                    st.success(f"Read **{doc.name}** ({info}).")
+                    stats = text_stats(text)
+                    c = st.columns(5)
+                    c[0].metric("Words", stats["words"])
+                    c[1].metric("Sentences", stats["sentences"])
+                    c[2].metric("Paragraphs", stats["paragraphs"])
+                    c[3].metric("Characters", stats["characters"])
+                    c[4].metric("Reading time (min)", stats["reading_minutes"])
+                    topic, kw = assign_topic(text)
+                    st.write(f"Overall tone: **{sentiment(text)}**  |  Topic: **{topic}**"
+                             + (f" (matched keyword: '{kw}')" if kw else ""))
+                    st.text_area("Extracted text", text, height=400)
+                    st.download_button("Download extracted text (.txt)", text,
+                                       file_name=Path(doc.name).stem + ".txt")
+        st.caption("Text is read on this server only and is not sent to Groq. Scanned/photographed pages "
+                   "have no selectable text and cannot be read here.")
+
 
 if __name__ == "__main__":
     main()
-         
-
-
- 
-
-
-
-
-
-
-
-
-
-
